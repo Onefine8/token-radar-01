@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar — which pre-token protocol launches next, and what it is worth</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="logo">◉</div>
+    <div>
+      <h1>TOKEN LAUNCH RADAR</h1>
+      <p class="sub">Every pre-token protocol in the snapshot, scored by what its token would be worth — and a farm plan for each one.</p>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<section class="method" id="method">
+  <h2>How the radar scores</h2>
+  <p>The snapshot lists <b id="m-protocols">758</b> protocols with a TVL (DefiLlama, <span id="m-asof">2026-11-14</span>).
+  <b id="m-priced">128</b> of them already have a token, and they teach the model. The other
+  <b id="m-pretoken">342</b> have no token yet — no market cap, no CoinGecko id, no symbol — and those are the launches to watch.</p>
+  <p><b>The model is one comps curve, fitted live from the snapshot:</b>
+  <code>mcap = a · TVL^b</code> with <span id="m-curve">a ≈ 1058, b ≈ 0.522</span>, fitted by log-log OLS on the
+  <span id="m-n">128</span> priced protocols and refit every time the page builds. It is not a flat multiple: the
+  mcap/TVL ratio collapses as protocols get bigger (0.65 below $10M TVL, 0.01 above $10B), so a flat multiple
+  overvalues the giants and undervalues the small. Leave-one-out validation on the same 128:</p>
+  <table class="mini">
+    <thead><tr><th>Model</th><th>Median |log error|</th><th>Mean |log error|</th></tr></thead>
+    <tbody>
+      <tr><td><b>Comps curve (this radar)</b></td><td id="m-loo">1.22</td><td id="m-loo-mean">1.60</td></tr>
+      <tr><td>Flat 0.25× multiple (house starter)</td><td id="m-flat">1.60</td><td>1.77</td></tr>
+    </tbody>
+  </table>
+  <p>Growth, age and per-category multipliers were tried and <b>rejected</b>: every one scored worse out-of-sample
+  (growth is negatively correlated with the multiple — fast growers are already priced in). The curve is the whole model.</p>
+  <p><b>Coverage.</b> The board ranks <b id="m-board">202</b> protocols: the full 40-protocol house watchlist plus every
+  other pre-token protocol that is a genuine launch candidate. Excluded, with reasons: centralised exchanges,
+  liquid-staking / staking / bridge families (their token is a receipt or a wrapped asset), versioned deployments,
+  wrapped assets. One watchlist member (Reti Pooling, a staking pool) enters through the watchlist, not the filter.</p>
+  <p><b>Farm verdict.</b> Each row carries a concrete plan: capital at risk by TVL tier ($50–$250), gas (setup + one
+  weekly action + claim), and a hold window (30–60 days, longer for younger protocols). The verdict comes from the
+  <b>cover</b> — implied value divided by the plan's all-in cost: <b>FARM</b> at 150,000× and above,
+  <b>THIN</b> at 75,000–150,000×, <b>SKIP</b> below 75,000×. Thresholds sit on the tertiles of this board's own
+  cover distribution (median ≈ 109,000×), so the split is 64 FARM / 84 THIN / 54 SKIP.</p>
+</section>
+
+<nav class="controls">
+  <div class="tabs">
+    <button id="tab-board" class="tab active" type="button">Pre-token board</button>
+    <button id="tab-live" class="tab" type="button">Live tokens</button>
+  </div>
+  <input id="q" type="search" placeholder="Search name, slug, category…" aria-label="Search">
+  <select id="f-cat" aria-label="Category"><option value="">All categories</option></select>
+  <select id="f-chain" aria-label="Chain"><option value="">All chains</option></select>
+  <select id="f-verdict" aria-label="Verdict">
+    <option value="">All verdicts</option><option>FARM</option><option>THIN</option><option>SKIP</option>
+  </select>
+  <select id="f-sort" aria-label="Sort">
+    <option value="implied">Sort: implied value ↓</option>
+    <option value="tvl">Sort: TVL ↓</option>
+    <option value="change">Sort: 7d change ↓</option>
+    <option value="age">Sort: age ↑</option>
+    <option value="name">Sort: name A–Z</option>
+  </select>
+</nav>
+
+<main>
+  <section id="board-view">
+    <p class="hint" id="board-count"></p>
+    <table class="board">
+      <thead><tr>
+        <th class="num">#</th><th>Protocol</th><th>Category</th><th>Chains</th>
+        <th class="num">TVL</th><th class="num">7d</th><th class="num">Age</th>
+        <th class="num">Implied value</th><th>Verdict</th>
+      </tr></thead>
+      <tbody id="board-body"></tbody>
+    </table>
+  </section>
+
+  <section id="live-view" hidden>
+    <p class="hint">The 24 largest live tokens in the snapshot, for calibration: their mcap/TVL ratio is what the curve is fitted against.</p>
+    <table class="board">
+      <thead><tr>
+        <th>Protocol</th><th>Category</th><th>Chains</th>
+        <th class="num">TVL</th><th class="num">Mcap</th><th class="num">Mcap / TVL</th>
+      </tr></thead>
+      <tbody id="live-body"></tbody>
+    </table>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" hidden>
+  <button id="drawer-close" class="close" type="button" aria-label="Close">✕</button>
+  <div id="drawer-body"></div>
+</aside>
+
+<footer>
+  <p>Snapshot: DefiLlama protocols, <span id="f-asof">2026-11-14</span>. No network calls, no tracking, no prices fetched live — every number on this page comes from that one snapshot and the curve fitted to it.</p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
