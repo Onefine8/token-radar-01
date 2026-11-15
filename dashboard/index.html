@@ -12,41 +12,11 @@
     <div class="logo">◉</div>
     <div>
       <h1>TOKEN LAUNCH RADAR</h1>
-      <p class="sub">Every pre-token protocol in the snapshot, scored by what its token would be worth — and a farm plan for each one.</p>
+      <p class="sub">Every pre-token protocol in the snapshot, scored by what its token would be worth — and a farm plan for each one, costed to the dollar.</p>
     </div>
   </div>
   <div class="stats" id="stats"></div>
 </header>
-
-<section class="method" id="method">
-  <h2>How the radar scores</h2>
-  <p>The snapshot lists <b id="m-protocols">758</b> protocols with a TVL (DefiLlama, <span id="m-asof">2026-11-14</span>).
-  <b id="m-priced">128</b> of them already have a token, and they teach the model. The other
-  <b id="m-pretoken">342</b> have no token yet — no market cap, no CoinGecko id, no symbol — and those are the launches to watch.</p>
-  <p><b>The model is one comps curve, fitted live from the snapshot:</b>
-  <code>mcap = a · TVL^b</code> with <span id="m-curve">a ≈ 1058, b ≈ 0.522</span>, fitted by log-log OLS on the
-  <span id="m-n">128</span> priced protocols and refit every time the page builds. It is not a flat multiple: the
-  mcap/TVL ratio collapses as protocols get bigger (0.65 below $10M TVL, 0.01 above $10B), so a flat multiple
-  overvalues the giants and undervalues the small. Leave-one-out validation on the same 128:</p>
-  <table class="mini">
-    <thead><tr><th>Model</th><th>Median |log error|</th><th>Mean |log error|</th></tr></thead>
-    <tbody>
-      <tr><td><b>Comps curve (this radar)</b></td><td id="m-loo">1.22</td><td id="m-loo-mean">1.60</td></tr>
-      <tr><td>Flat 0.25× multiple (house starter)</td><td id="m-flat">1.60</td><td>1.77</td></tr>
-    </tbody>
-  </table>
-  <p>Growth, age and per-category multipliers were tried and <b>rejected</b>: every one scored worse out-of-sample
-  (growth is negatively correlated with the multiple — fast growers are already priced in). The curve is the whole model.</p>
-  <p><b>Coverage.</b> The board ranks <b id="m-board">202</b> protocols: the full 40-protocol house watchlist plus every
-  other pre-token protocol that is a genuine launch candidate. Excluded, with reasons: centralised exchanges,
-  liquid-staking / staking / bridge families (their token is a receipt or a wrapped asset), versioned deployments,
-  wrapped assets. One watchlist member (Reti Pooling, a staking pool) enters through the watchlist, not the filter.</p>
-  <p><b>Farm verdict.</b> Each row carries a concrete plan: capital at risk by TVL tier ($50–$250), gas (setup + one
-  weekly action + claim), and a hold window (30–60 days, longer for younger protocols). The verdict comes from the
-  <b>cover</b> — implied value divided by the plan's all-in cost: <b>FARM</b> at 150,000× and above,
-  <b>THIN</b> at 75,000–150,000×, <b>SKIP</b> below 75,000×. Thresholds sit on the tertiles of this board's own
-  cover distribution (median ≈ 109,000×), so the split is 64 FARM / 84 THIN / 54 SKIP.</p>
-</section>
 
 <nav class="controls">
   <div class="tabs">
@@ -61,6 +31,7 @@
   </select>
   <select id="f-sort" aria-label="Sort">
     <option value="implied">Sort: implied value ↓</option>
+    <option value="low">Sort: low-end value ↓</option>
     <option value="tvl">Sort: TVL ↓</option>
     <option value="change">Sort: 7d change ↓</option>
     <option value="age">Sort: age ↑</option>
@@ -75,7 +46,7 @@
       <thead><tr>
         <th class="num">#</th><th>Protocol</th><th>Category</th><th>Chains</th>
         <th class="num">TVL</th><th class="num">7d</th><th class="num">Age</th>
-        <th class="num">Implied value</th><th>Verdict</th>
+        <th class="num">Implied value<br><span class="sub2">low end</span></th><th>Verdict</th>
       </tr></thead>
       <tbody id="board-body"></tbody>
     </table>
@@ -93,13 +64,59 @@
   </section>
 </main>
 
+<section class="method" id="method">
+  <h2>How the radar scores</h2>
+  <p>The snapshot lists <b id="m-protocols">758</b> protocols with a TVL (DefiLlama, <span id="m-asof">2026-11-14</span>).
+  <b id="m-priced">128</b> of them already have a token, and they teach the model. The other
+  <b id="m-pretoken">342</b> have no token yet — no market cap, no CoinGecko id, no symbol — and those are the launches to watch.</p>
+  <p><b>The model is one comps curve, fitted live from the snapshot:</b>
+  <code>mcap = a · TVL^b</code> with <span id="m-curve">a ≈ 1058, b ≈ 0.522</span>, fitted by log-log OLS on the
+  <span id="m-n">128</span> priced protocols and refit every time the page builds. It is not a flat multiple: the
+  mcap/TVL ratio collapses as protocols get bigger (0.65 below $10M TVL, 0.01 above $10B), so a flat multiple
+  overvalues the giants and undervalues the small.</p>
+  <p><b>Validation — the curve is tested blind, not just fitted:</b></p>
+  <table class="mini">
+    <thead><tr><th>Test</th><th>Median |log error|</th><th>Mean |log error|</th><th>Typical miss</th></tr></thead>
+    <tbody>
+      <tr><td><b>Comps curve — leave-one-out (n=128)</b></td><td id="m-loo">1.22</td><td id="m-loo-mean">1.60</td><td>3.4×</td></tr>
+      <tr><td>Comps curve — blind time-split 70/30 (train oldest, test newest 29)</td><td id="m-ts70">1.21</td><td id="m-ts70-mean">1.53</td><td>3.3×</td></tr>
+      <tr><td>Comps curve — blind time-split 60/40 (test newest 38)</td><td id="m-ts60">1.18</td><td id="m-ts60-mean">1.47</td><td>3.2×</td></tr>
+      <tr><td>Flat 0.25× multiple (house starter) — leave-one-out</td><td id="m-flat">1.59</td><td>1.77</td><td>4.9×</td></tr>
+    </tbody>
+  </table>
+  <p>Bootstrap stability (<span id="m-nboot">200</span> seeded refits): the curve’s slope sits at
+  <span id="m-slope-ci">0.378–0.672</span> with 90% confidence, so the curve is not one lucky fit. The same 200 refits give every
+  protocol a value <b>band</b> — low / central / high — and the verdict is taken at the <b>low end</b>: a plan must pay for
+  itself even if the launch comes in at the bottom of the band. The band is the fit’s own uncertainty; the full
+  prediction error is wider (leave-one-out median 3.4×), and the dashboard does not hide that.</p>
+  <p>Growth, age and per-category multipliers were tried and <b>rejected</b> — 21 variants in all (growth and age terms,
+  per-category offsets, robust/Huber and winsorised fits, a cleaner training set, shrunk tilts, k-NN local regression,
+  a broken-stick fit, a quadratic log-ratio, L1 median regression). None beat the curve on leave-one-out or on both
+  time splits. Growth is negatively correlated with the multiple (fast growers are already priced in) and age carries
+  no signal at all (correlation −0.02). The curve is the whole model because the data says so — the full numbers are
+  reproducible from the repo’s scripts.</p>
+  <p><b>Coverage.</b> The board ranks <b id="m-board">202</b> protocols: the full 40-protocol house watchlist plus every
+  other pre-token protocol that is a genuine launch candidate. Excluded, with reasons: centralised exchanges,
+  liquid-staking / staking / bridge families (their token is a receipt or a wrapped asset), versioned deployments,
+  wrapped assets. One watchlist member (Reti Pooling, a staking pool) enters through the watchlist, not the filter.</p>
+  <p><b>Farm verdict — costed to the dollar.</b> Each row carries a concrete plan: capital at risk by TVL tier
+  ($50–$250), gas priced per transaction on the protocol’s own chain (estimates, Nov 2026: Ethereum $12.00,
+  BSC $0.15, Arbitrum/Optimism $0.30, Base $0.10, Polygon $0.05, Solana $0.01, anything else $1.00 — 2 setup
+  transactions + one weekly action + 2 claim transactions), and a hold window (30–60 days, longer for younger
+  protocols). The verdict comes from the <b>low-end cover</b> — the band’s low value divided by the plan’s all-in
+  cost: <b>FARM</b> at 100,000× and above, <b>THIN</b> at 50,000–100,000×, <b>SKIP</b> below 50,000×. Thresholds sit
+  on the tertiles of this board’s own low-end cover distribution (median ≈ 73,000×), so the split is
+  <b id="m-split">70 FARM / 69 THIN / 63 SKIP</b>. Every plan also states its <b>break-even</b> — the share of the
+  token supply your airdrop must be to cover the all-in cost (board median 0.0014%).</p>
+</section>
+
 <aside id="drawer" class="drawer" hidden>
   <button id="drawer-close" class="close" type="button" aria-label="Close">✕</button>
   <div id="drawer-body"></div>
 </aside>
 
 <footer>
-  <p>Snapshot: DefiLlama protocols, <span id="f-asof">2026-11-14</span>. No network calls, no tracking, no prices fetched live — every number on this page comes from that one snapshot and the curve fitted to it.</p>
+  <p>Snapshot: DefiLlama protocols, <span id="f-asof">2026-11-14</span>. No network calls, no tracking, no prices fetched live — every number on this page comes from that one snapshot and the curve fitted to it. Gas prices are estimates; re-price any plan by multiplying its transaction count by the chain’s current per-transaction fee.</p>
 </footer>
 
 <script src="../data.js"></script>

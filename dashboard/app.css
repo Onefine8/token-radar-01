@@ -60,6 +60,8 @@ table.board { width: 100%; border-collapse: collapse; background: var(--panel); 
 .cat { color: #c9d4e2; }
 .chains { color: var(--muted); font-size: 12.5px; }
 .implied { font-family: var(--mono); font-weight: 700; color: var(--amber); }
+.low { font-size: 11px; color: var(--muted); font-weight: 400; }
+.sub2 { font-size: 10px; color: var(--dim); text-transform: none; letter-spacing: 0; }
 .pill { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
   padding: 3px 8px; border-radius: 20px; }
 .pill.FARM { background: rgba(45, 212, 191, 0.15); color: var(--teal); border: 1px solid rgba(45, 212, 191, 0.4); }

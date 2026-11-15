@@ -65,13 +65,18 @@ function main(): void {
 
   const verdicts = { FARM: 0, THIN: 0, SKIP: 0 };
   for (const r of radar.board) verdicts[r.verdict]++;
+  const lows = radar.board.map((r) => r.cover_low).sort((a, b) => a - b);
+  const q = (f: number) => Math.round(lows[Math.floor(lows.length * f)]!);
   console.log(
     [
       `radar as_of=${radar.as_of} protocols=${radar.counts.protocols} pre-token=${radar.counts.pre_token} strict=${radar.counts.strict}`,
       `board=${radar.counts.board} rows watchlist=${radar.counts.watchlist}/${radar.counts.watchlist} live=${radar.counts.live}`,
       `curve mcap=${radar.curve.a.toFixed(2)}*TVL^${radar.curve.b.toFixed(4)} (n=${radar.curve.n}) LOO median=${radar.curve.loo_median.toFixed(3)} vs flat 0.25x ${radar.flat_loo_median.toFixed(3)}`,
-      `verdicts FARM=${verdicts.FARM} THIN=${verdicts.THIN} SKIP=${verdicts.SKIP}`,
-      `top: ${radar.board.slice(0, 3).map((r) => `${r.rank}. ${r.slug} $${Math.round(r.implied_value_usd).toLocaleString('en-US')}`).join(' | ')}`,
+      `blind time-split 70/30 median=${radar.validation.time_split_70.median.toFixed(3)} (n=${radar.validation.time_split_70.n_test}) 60/40 median=${radar.validation.time_split_60.median.toFixed(3)} (n=${radar.validation.time_split_60.n_test})`,
+      `bootstrap slope 90% CI [${radar.validation.slope_lo.toFixed(3)}, ${radar.validation.slope_hi.toFixed(3)}] (n_boot=${radar.validation.n_boot})`,
+      `low-end cover min=${q(0)} p25=${q(0.25)} median=${q(0.5)} p75=${q(0.75)} max=${q(0.999)}`,
+      `verdicts (low-end) FARM=${verdicts.FARM} THIN=${verdicts.THIN} SKIP=${verdicts.SKIP}`,
+      `top: ${radar.board.slice(0, 3).map((r) => `${r.rank}. ${r.slug} $${Math.round(r.implied_value_usd).toLocaleString('en-US')} (low $${Math.round(r.implied_low_usd).toLocaleString('en-US')})`).join(' | ')}`,
       `wrote ${outputDir}/board.json ${outputDir}/data.js ${outputDir}/dashboard/ ${outputDir}/screenshots/ ${outputDir}/dossier.json`,
     ].join('\n'),
   );
