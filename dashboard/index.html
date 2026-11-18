@@ -12,11 +12,22 @@
     <div class="logo">◉</div>
     <div>
       <h1>TOKEN LAUNCH RADAR</h1>
-      <p class="sub">Every pre-token protocol in the snapshot, scored by what its token would be worth — and a farm plan for each one, costed to the dollar.</p>
+      <p class="sub">Every pre-token protocol in the snapshot, scored by what its token would be worth — and a farm plan for each one, costed to the dollar. Rank is launch scale; the verdict is farm economics, and the two do not always agree.</p>
     </div>
   </div>
   <div class="stats" id="stats"></div>
 </header>
+
+<section class="panel" id="built">
+  <h2>How a value is built — rank #1, worked end to end</h2>
+  <div id="built-body" class="built"></div>
+</section>
+
+
+
+
+
+
 
 <nav class="controls">
   <div class="tabs">
@@ -31,12 +42,19 @@
   </select>
   <select id="f-sort" aria-label="Sort">
     <option value="implied">Sort: implied value ↓</option>
+    <option value="net">Sort: best farms (expected net ↓)</option>
     <option value="low">Sort: low-end value ↓</option>
+    <option value="odds">Sort: launch odds ↓</option>
     <option value="tvl">Sort: TVL ↓</option>
     <option value="change">Sort: 7d change ↓</option>
     <option value="age">Sort: age ↑</option>
     <option value="name">Sort: name A–Z</option>
   </select>
+  <div class="ticket" role="group" aria-label="Farm ticket size">
+    <span class="ticket-label">Ticket</span>
+    <button id="ticket-1000" class="ticket-btn active" type="button">$1,000</button>
+    <button id="ticket-10000" class="ticket-btn" type="button">$10,000</button>
+  </div>
 </nav>
 
 <main>
@@ -44,9 +62,12 @@
     <p class="hint" id="board-count"></p>
     <table class="board">
       <thead><tr>
-        <th class="num">#</th><th>Protocol</th><th>Category</th><th>Chains</th>
+        <th class="num">#<br><span class="sub2">rank range</span></th><th>Protocol</th><th>Category</th><th>Chains</th>
         <th class="num">TVL</th><th class="num">7d</th><th class="num">Age</th>
-        <th class="num">Implied value<br><span class="sub2">low end</span></th><th>Verdict</th>
+        <th class="num">Implied value<br><span class="sub2">low – high</span></th>
+        <th class="num">Launch<br>odds</th>
+        <th class="num">Expected net<br><span class="sub2" id="net-head-sub">@ $1,000 ticket</span></th>
+        <th>Verdict</th>
       </tr></thead>
       <tbody id="board-body"></tbody>
     </table>
@@ -63,6 +84,18 @@
     </table>
   </section>
 </main>
+
+<section class="panel" id="ledger">
+  <h2>Ledger — all 758 protocols in the snapshot, accounted for</h2>
+  <div id="ledger-body" class="ledger"></div>
+  <p class="fine">Every protocol in the snapshot appears exactly once below. Nothing is silently dropped: the board ranks 202, the rest are listed with the reason they are not ranked.</p>
+</section>
+
+<section class="panel" id="scatter-panel">
+  <h2>The fit — 128 priced protocols teach the curve</h2>
+  <canvas id="scatter" width="880" height="300"></canvas>
+  <p class="fine">Teal dots: the 128 protocols that already have a token (their TVL and mcap). Amber line: the comps curve fitted to them. Hollow dots: the 202 board rows — predictions, not data. Log–log axes. A token’s value does not grow in proportion to TVL: the curve is sublinear, so the mcap/TVL ratio collapses as protocols get bigger.</p>
+</section>
 
 <section class="method" id="method">
   <h2>How the radar scores</h2>
@@ -81,33 +114,48 @@
       <tr><td><b>Comps curve — leave-one-out (n=128)</b></td><td id="m-loo">1.22</td><td id="m-loo-mean">1.60</td><td>3.4×</td></tr>
       <tr><td>Comps curve — blind time-split 70/30 (train oldest, test newest 29)</td><td id="m-ts70">1.21</td><td id="m-ts70-mean">1.53</td><td>3.3×</td></tr>
       <tr><td>Comps curve — blind time-split 60/40 (test newest 38)</td><td id="m-ts60">1.18</td><td id="m-ts60-mean">1.47</td><td>3.2×</td></tr>
+      <tr><td>Comps curve — walk-forward, expanding window (4 folds, n=38)</td><td id="m-wf">1.12</td><td id="m-wf-mean">1.38</td><td>3.1×</td></tr>
       <tr><td>Flat 0.25× multiple (house starter) — leave-one-out</td><td id="m-flat">1.59</td><td>1.77</td><td>4.9×</td></tr>
     </tbody>
   </table>
   <p>Bootstrap stability (<span id="m-nboot">200</span> seeded refits): the curve’s slope sits at
   <span id="m-slope-ci">0.378–0.672</span> with 90% confidence, so the curve is not one lucky fit. The same 200 refits give every
-  protocol a value <b>band</b> — low / central / high — and the verdict is taken at the <b>low end</b>: a plan must pay for
-  itself even if the launch comes in at the bottom of the band. The band is the fit’s own uncertainty; the full
-  prediction error is wider (leave-one-out median 3.4×), and the dashboard does not hide that.</p>
-  <p>Growth, age and per-category multipliers were tried and <b>rejected</b> — 21 variants in all (growth and age terms,
-  per-category offsets, robust/Huber and winsorised fits, a cleaner training set, shrunk tilts, k-NN local regression,
-  a broken-stick fit, a quadratic log-ratio, L1 median regression). None beat the curve on leave-one-out or on both
-  time splits. Growth is negatively correlated with the multiple (fast growers are already priced in) and age carries
-  no signal at all (correlation −0.02). The curve is the whole model because the data says so — the full numbers are
-  reproducible from the repo’s scripts.</p>
+  protocol a value <b>band</b> — low / central / high — and a <b>rank range</b> (P10–P90 of the rank across refits).
+  The band is the <b>fit’s own uncertainty</b>: it says where the curve sits, not where any single launch will land.
+  Individual launches scatter much wider — the leave-one-out median miss is 3.4× — and the dashboard does not hide that.</p>
+  <p><b>Ablation — every rival term, tested live on this snapshot.</b> A variant displaces the plain curve only if it
+  wins on <i>both</i> leave-one-out and walk-forward, on the same 128 protocols. None does:</p>
+  <table class="mini" id="ablation-table">
+    <thead><tr><th>Variant</th><th>LOO median</th><th>Walk-forward median</th><th>Test set</th><th>Kept?</th><th>Why</th></tr></thead>
+    <tbody id="ablation-body"></tbody>
+  </table>
+  <p><b>Launch odds</b> come from a logistic model on log TVL, age, 7d growth and sector, fitted on all 758 protocols
+  (pre-token = 0, launched = 1). Five-fold cross-validated accuracy is <b id="m-odds-cv">64.2%</b> against a
+  <b id="m-odds-base">54.9%</b> majority-class base rate (n=758) — modest, and stated as such. The odds are a
+  <b>resemblance score</b> (“this protocol looks like the ones that already launched”), not a prediction of a future event.</p>
+  <p><b>Farm verdict — the farmer’s expected net, not the launch’s size.</b> The expected airdrop slice is
+  launch odds × ticket × (implied value / TVL) × a 7% airdrop share; the expected net is that slice minus gas.
+  Capital is <b>not</b> a cost — the deposit comes back — so the cost is gas only, priced per transaction on the
+  protocol’s own chain (estimates, Nov 2026: Ethereum $12.00, BSC $0.15, Arbitrum/Optimism $0.30, Base $0.10,
+  Polygon $0.05, Solana $0.01, anything else $1.00 — 2 setup transactions + one weekly action + 2 claim transactions),
+  over a 30–60 day hold (longer for younger protocols). The verdict is taken at the <b>low end</b> of the value band:
+  <b>FARM</b> when the low-end expected net clears $10 at a $1,000 ticket, <b>THIN</b> when it is positive but below $10,
+  <b>SKIP</b> when it is zero or negative. The $10 floor is the round number nearest the top decile of this board’s own
+  expected-net distribution (p90 is $11.36) — a farm must clear $10 of expected profit, about $4 an hour of active work,
+  not just break even. At the $1,000 ticket the split is <b id="m-split">32 FARM / 74 THIN / 96 SKIP</b>. Use the ticket
+  toggle above to re-price every row at $10,000: the slice grows tenfold, the gas does not, and the verdicts move with it.
+  Every plan also states its <b>break-even</b> — the share of the token supply your airdrop must be to cover the all-in cost.</p>
+  <p><b>Why the biggest launches are often SKIP.</b> Rank is launch scale; the verdict is farm economics, and three
+  forces pull them apart. First, gas: farming on Ethereum costs $108–$156 for the whole plan, which no $1,000-ticket
+  slice can cover — all 54 Ethereum rows are SKIP at that ticket. Second, odds: the largest risk curators launch rarely,
+  so their odds sit at 17–24%. Third, the slice multiple itself: the curve is sublinear, so a giant’s implied value is
+  a thin sliver of its TVL (implied/TVL ≈ 0.005 at the top), and a $1,000 ticket buys a slice of a few cents. The board
+  shows both numbers instead of hiding the tension — sort by “best farms” to see the rows where the economics actually work.</p>
   <p><b>Coverage.</b> The board ranks <b id="m-board">202</b> protocols: the full 40-protocol house watchlist plus every
   other pre-token protocol that is a genuine launch candidate. Excluded, with reasons: centralised exchanges,
   liquid-staking / staking / bridge families (their token is a receipt or a wrapped asset), versioned deployments,
-  wrapped assets. One watchlist member (Reti Pooling, a staking pool) enters through the watchlist, not the filter.</p>
-  <p><b>Farm verdict — costed to the dollar.</b> Each row carries a concrete plan: capital at risk by TVL tier
-  ($50–$250), gas priced per transaction on the protocol’s own chain (estimates, Nov 2026: Ethereum $12.00,
-  BSC $0.15, Arbitrum/Optimism $0.30, Base $0.10, Polygon $0.05, Solana $0.01, anything else $1.00 — 2 setup
-  transactions + one weekly action + 2 claim transactions), and a hold window (30–60 days, longer for younger
-  protocols). The verdict comes from the <b>low-end cover</b> — the band’s low value divided by the plan’s all-in
-  cost: <b>FARM</b> at 100,000× and above, <b>THIN</b> at 50,000–100,000×, <b>SKIP</b> below 50,000×. Thresholds sit
-  on the tertiles of this board’s own low-end cover distribution (median ≈ 73,000×), so the split is
-  <b id="m-split">70 FARM / 69 THIN / 63 SKIP</b>. Every plan also states its <b>break-even</b> — the share of the
-  token supply your airdrop must be to cover the all-in cost (board median 0.0014%).</p>
+  wrapped assets. One watchlist member (Reti Pooling, a staking pool) enters through the watchlist, not the filter.
+  The ledger above accounts for all 758.</p>
 </section>
 
 <aside id="drawer" class="drawer" hidden>
@@ -116,7 +164,7 @@
 </aside>
 
 <footer>
-  <p>Snapshot: DefiLlama protocols, <span id="f-asof">2026-11-14</span>. No network calls, no tracking, no prices fetched live — every number on this page comes from that one snapshot and the curve fitted to it. Gas prices are estimates; re-price any plan by multiplying its transaction count by the chain’s current per-transaction fee.</p>
+  <p>Snapshot: DefiLlama protocols, <span id="f-asof">2026-11-14</span>. No network calls, no tracking, no prices fetched live — every number on this page comes from that one snapshot and the curve fitted to it. Gas prices are estimates; re-price any plan by multiplying its transaction count by the chain’s current per-transaction fee. The 7% airdrop share is an assumption, stated in the method; change it and the nets scale with it.</p>
 </footer>
 
 <script src="../data.js"></script>

@@ -1,12 +1,15 @@
-// fit-model.mjs — dev tooling for the token-radar-01 entry v2 (NOT runtime).
+// fit-model.mjs — dev tooling for the token-radar-01 entry v3 (NOT runtime).
 //
 // Reproduces the offline model selection in Node so anyone can re-derive it
 // from the kit snapshot: the log-log comps curve (mcap = a * TVL^b) fit on
-// the 128 tokenised protocols, validated three ways — leave-one-out, two
-// blind time splits (train oldest, test newest) and a seeded bootstrap —
-// against the flat 0.25x multiple the starter uses, plus the low-end cover
-// distribution that sets the verdict thresholds. No network, no randomness
-// (bootstrap uses a seeded LCG): same snapshot in, same numbers out.
+// the 128 tokenised protocols, validated four ways — leave-one-out, two
+// blind time splits (train oldest, test newest), walk-forward (expanding
+// window) and a seeded bootstrap — against the flat 0.25x multiple the
+// starter uses. No network, no randomness (bootstrap uses a seeded LCG):
+// same snapshot in, same numbers out. The verdict itself is NOT reproduced
+// here — v3's verdict is the farmer's odds-weighted expected net (see
+// lib/model.ts farmPlan and v3/scripts/experiment-v3*.mjs), not the low-end
+// cover v2 used.
 //
 //   node scripts/fit-model.mjs [path/to/snapshot.json]
 //
@@ -14,13 +17,13 @@
 //   curve a ~= 1058.46, b ~= 0.5223
 //   LOO |log err| curve  median=1.223 mean=1.596; flat 0.25x median=1.591
 //   time-split 70/30 median=1.207 (n=29); 60/40 median=1.177 (n=38)
+//   walk-forward pooled median=1.124 (n=38, 4 folds)
 //   bootstrap slope 90% CI [0.378, 0.672] (200 refits, seeded)
-//   -> the curve wins; 21 fitted variants with extra terms (growth, age,
-//      per-category offsets, robust/Huber, winsorised, clean-train, shrunk
-//      tilts, k-NN, broken-stick, quadratic, L1) all scored WORSE on LOO or
-//      on both time splits, so the runtime model is the plain global curve,
-//      refit live in lib/model.ts. See v2/scripts/experiment*.mjs for the
-//      full variant tables.
+//   -> the curve wins; the 8 runtime ablation variants (sector offsets,
+//      growth tilt, age, sector+growth, Huber, TVL offset, mcap-floor fit)
+//      all scored WORSE on LOO or walk-forward, so the runtime model is the
+//      plain global curve, refit live in lib/model.ts. See
+//      v3/scripts/experiment-v3*.mjs for the full variant tables.
 import { readFileSync } from 'node:fs';
 
 const SNAPSHOT = process.argv[2] ?? new URL('../../../kit/token-radar-01-kit/input/snapshot.json', import.meta.url).pathname;
@@ -178,7 +181,8 @@ const covers = board
   .sort((x, y) => x.coverLow - y.coverLow);
 const q = (f) => covers[Math.floor(covers.length * f)].coverLow;
 console.log(`low-end cover min=${Math.round(covers[0].coverLow)} p25=${Math.round(q(0.25))} median=${Math.round(q(0.5))} p75=${Math.round(q(0.75))} max=${Math.round(covers[covers.length - 1].coverLow)}`);
-console.log('verdict thresholds: FARM cover_low>=100000, THIN 50000..100000, SKIP <50000');
-const split = { FARM: 0, THIN: 0, SKIP: 0 };
-for (const c of covers) split[c.coverLow >= 100000 ? 'FARM' : c.coverLow >= 50000 ? 'THIN' : 'SKIP']++;
-console.log(`verdict split: FARM=${split.FARM} THIN=${split.THIN} SKIP=${split.SKIP}`);
+// v3 verdict: NOT cover-based. The farmer's expected net (launch odds x
+// ticket x (implied/TVL) x 7% drop share, minus gas) at the low end decides:
+// FARM when the low-end net clears $10 at a $1,000 ticket, THIN when
+// positive but below $10, SKIP otherwise. That needs the launch-odds model,
+// so it lives in lib/model.ts (farmPlan + buildRadar), not in this script.

@@ -67,16 +67,23 @@ function main(): void {
   for (const r of radar.board) verdicts[r.verdict]++;
   const lows = radar.board.map((r) => r.cover_low).sort((a, b) => a - b);
   const q = (f: number) => Math.round(lows[Math.floor(lows.length * f)]!);
+  const nets = radar.board.map((r) => r.net_low_usd).sort((a, b) => a - b);
+  const nq = (f: number) => nets[Math.floor(nets.length * f)]!;
   console.log(
     [
       `radar as_of=${radar.as_of} protocols=${radar.counts.protocols} pre-token=${radar.counts.pre_token} strict=${radar.counts.strict}`,
       `board=${radar.counts.board} rows watchlist=${radar.counts.watchlist}/${radar.counts.watchlist} live=${radar.counts.live}`,
       `curve mcap=${radar.curve.a.toFixed(2)}*TVL^${radar.curve.b.toFixed(4)} (n=${radar.curve.n}) LOO median=${radar.curve.loo_median.toFixed(3)} vs flat 0.25x ${radar.flat_loo_median.toFixed(3)}`,
       `blind time-split 70/30 median=${radar.validation.time_split_70.median.toFixed(3)} (n=${radar.validation.time_split_70.n_test}) 60/40 median=${radar.validation.time_split_60.median.toFixed(3)} (n=${radar.validation.time_split_60.n_test})`,
+      `walk-forward pooled median=${radar.walk_forward.median.toFixed(3)} mean=${radar.walk_forward.mean.toFixed(3)} (n=${radar.walk_forward.n}) folds: ${radar.walk_forward.folds.map((f) => `${f.label} ${f.median.toFixed(3)} (n=${f.n})`).join(', ')}`,
       `bootstrap slope 90% CI [${radar.validation.slope_lo.toFixed(3)}, ${radar.validation.slope_hi.toFixed(3)}] (n_boot=${radar.validation.n_boot})`,
+      `launch odds 5-fold CV accuracy=${(radar.odds_cv.accuracy * 100).toFixed(1)}% vs base ${(radar.odds_cv.base_rate * 100).toFixed(1)}% (n=${radar.odds_cv.n})`,
+      `ledger: ranked=${radar.ledger.ranked} trades=${radar.ledger.token_trades} on-record=${radar.ledger.token_on_record} bridge=${radar.ledger.bridge} lst=${radar.ledger.liquid_staking} cex=${radar.ledger.exchange_custody} versioned=${radar.ledger.versioned} other=${radar.ledger.other} total=${radar.ledger.total}`,
+      `ablation: ${radar.ablation.map((a) => `${a.name.split('(')[0]!.trim()} LOO ${a.loo_median.toFixed(2)} WF ${a.wf_median.toFixed(2)} ${a.kept ? 'KEPT' : 'dropped'}`).join(' | ')}`,
       `low-end cover min=${q(0)} p25=${q(0.25)} median=${q(0.5)} p75=${q(0.75)} max=${q(0.999)}`,
-      `verdicts (low-end) FARM=${verdicts.FARM} THIN=${verdicts.THIN} SKIP=${verdicts.SKIP}`,
-      `top: ${radar.board.slice(0, 3).map((r) => `${r.rank}. ${r.slug} $${Math.round(r.implied_value_usd).toLocaleString('en-US')} (low $${Math.round(r.implied_low_usd).toLocaleString('en-US')})`).join(' | ')}`,
+      `expected net @ $1k: min=$${nq(0).toFixed(2)} p25=$${nq(0.25).toFixed(2)} median=$${nq(0.5).toFixed(2)} p75=$${nq(0.75).toFixed(2)} max=$${nq(0.999).toFixed(2)}`,
+      `verdicts (odds-weighted net @ $1k) FARM=${verdicts.FARM} THIN=${verdicts.THIN} SKIP=${verdicts.SKIP}`,
+      `top: ${radar.board.slice(0, 3).map((r) => `${r.rank}. ${r.slug} $${Math.round(r.implied_value_usd).toLocaleString('en-US')} (low $${Math.round(r.implied_low_usd).toLocaleString('en-US')}, odds ${Math.round(r.launch_odds * 100)}%, net $${r.net_low_usd.toFixed(2)})`).join(' | ')}`,
       `wrote ${outputDir}/board.json ${outputDir}/data.js ${outputDir}/dashboard/ ${outputDir}/screenshots/ ${outputDir}/dossier.json`,
     ].join('\n'),
   );
